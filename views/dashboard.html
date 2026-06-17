@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Pulso</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
+</head>
+<body>
+  <nav>
+    <span class="nav-brand">Pulso</span>
+    <div class="nav-links">
+      <a href="/" class="active">Dashboard</a>
+      <a href="/registro">Registrar</a>
+      <a href="/relatorio">Relatório</a>
+      <form action="/logout" method="post" style="margin:0">
+        <button type="submit" class="nav-logout">Sair</button>
+      </form>
+    </div>
+  </nav>
+
+  <div class="page">
+    <div id="alertaCrise" class="alerta-crise">
+      Última medição em nível de crise hipertensiva. Procure atendimento médico imediatamente.
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+      <h1 style="margin:0">Pressão arterial</h1>
+      <a href="/registro" class="btn btn-primary">+ Registrar</a>
+    </div>
+
+    <div class="filtros">
+      <button class="btn-filtro" data-periodo="7d">7 dias</button>
+      <button class="btn-filtro ativo" data-periodo="30d">Último mês</button>
+      <button class="btn-filtro" data-periodo="1a">Último ano</button>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-label">Média sistólica</div>
+        <div><span class="card-valor" id="mediaSis">—</span><span class="card-unidade">mmHg</span></div>
+      </div>
+      <div class="card">
+        <div class="card-label">Média diastólica</div>
+        <div><span class="card-valor" id="mediaDia">—</span><span class="card-unidade">mmHg</span></div>
+      </div>
+      <div class="card">
+        <div class="card-label">Média BPM</div>
+        <div><span class="card-valor" id="mediaBpm">—</span><span class="card-unidade">bpm</span></div>
+      </div>
+      <div class="card">
+        <div class="card-label">Última medição</div>
+        <div><span class="card-valor" id="ultimaVal">—</span></div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px" id="ultimaData"></div>
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <canvas id="grafico"></canvas>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+      <h2 style="margin:0">Medições</h2>
+      <button class="btn btn-secondary" id="btnPdf">Exportar PDF</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Data / Hora</th>
+            <th>Sistólica</th>
+            <th>Diastólica</th>
+            <th>BPM</th>
+            <th>Observação</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tabelaCorpo">
+          <tr><td colspan="6" class="sem-dados">Carregando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>

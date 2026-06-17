@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatório — Pulso</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav>
+    <span class="nav-brand">Pulso</span>
+    <div class="nav-links">
+      <a href="/">Dashboard</a>
+      <a href="/registro">Registrar</a>
+      <a href="/relatorio" class="active">Relatório</a>
+      <form action="/logout" method="post" style="margin:0">
+        <button type="submit" class="nav-logout">Sair</button>
+      </form>
+    </div>
+  </nav>
+
+  <div class="page">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+      <h1 style="margin:0">Relatório</h1>
+      <button class="btn btn-secondary" id="btnPdf">Exportar PDF</button>
+    </div>
+
+    <div class="filtros">
+      <button class="btn-filtro" data-periodo="7d">7 dias</button>
+      <button class="btn-filtro ativo" data-periodo="30d">Último mês</button>
+      <button class="btn-filtro" data-periodo="1a">Último ano</button>
+    </div>
+
+    <div class="resumo-grid" id="resumoGrid">
+      <div class="resumo-item">
+        <div class="resumo-label">Média sistólica</div>
+        <div class="resumo-valor" id="mediaSis">—</div>
+      </div>
+      <div class="resumo-item">
+        <div class="resumo-label">Média diastólica</div>
+        <div class="resumo-valor" id="mediaDia">—</div>
+      </div>
+      <div class="resumo-item">
+        <div class="resumo-label">Média BPM</div>
+        <div class="resumo-valor" id="mediaBpm">—</div>
+      </div>
+      <div class="resumo-item">
+        <div class="resumo-label">Total de medições</div>
+        <div class="resumo-valor" id="total">—</div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Data / Hora</th>
+            <th>Sistólica</th>
+            <th>Diastólica</th>
+            <th>BPM</th>
+            <th>Origem</th>
+            <th>Observação</th>
+          </tr>
+        </thead>
+        <tbody id="tabelaCorpo">
+          <tr><td colspan="6" class="sem-dados">Carregando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="/js/relatorio.js"></script>
+</body>
+</html>

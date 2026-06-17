@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registrar — Pulso</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav>
+    <span class="nav-brand">Pulso</span>
+    <div class="nav-links">
+      <a href="/">Dashboard</a>
+      <a href="/registro" class="active">Registrar</a>
+      <a href="/relatorio">Relatório</a>
+      <form action="/logout" method="post" style="margin:0">
+        <button type="submit" class="nav-logout">Sair</button>
+      </form>
+    </div>
+  </nav>
+
+  <div class="page" style="max-width:560px">
+    <h1>Nova medição</h1>
+
+    <div id="alertaCrise" class="alerta-crise">
+      Medição em nível de crise hipertensiva. Procure atendimento médico imediatamente.
+    </div>
+    <div id="msgSucesso" class="msg-sucesso"></div>
+
+    <form id="formRegistro">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="sistolica">Sistólica (mmHg) *</label>
+          <input type="number" id="sistolica" name="sistolica" min="60" max="260" required placeholder="120">
+        </div>
+        <div class="form-group">
+          <label for="diastolica">Diastólica (mmHg) *</label>
+          <input type="number" id="diastolica" name="diastolica" min="30" max="180" required placeholder="80">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="bpm">BPM (opcional)</label>
+        <input type="number" id="bpm" name="bpm" min="30" max="220" placeholder="72">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="data">Data *</label>
+          <input type="date" id="data" name="data" required>
+        </div>
+        <div class="form-group">
+          <label for="hora">Hora *</label>
+          <input type="time" id="hora" name="hora" required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="observacao">Observação</label>
+        <select id="observacaoSel" style="margin-bottom:8px">
+          <option value="">Selecione uma sugestão ou escreva abaixo…</option>
+          <option>Antes do café da manhã</option>
+          <option>Após exercício</option>
+          <option>Em repouso</option>
+          <option>Após tomar o remédio</option>
+          <option>Antes de dormir</option>
+          <option>Sentindo sintomas (dor de cabeça, tontura)</option>
+        </select>
+        <textarea id="observacao" name="observacao" placeholder="Texto livre…"></textarea>
+      </div>
+
+      <div id="erroMsg" style="color:var(--crise);font-size:13px;margin-bottom:12px;display:none"></div>
+
+      <div class="actions">
+        <button type="submit" class="btn btn-primary">Salvar medição</button>
+        <a href="/" class="btn btn-secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+
+  <script src="/js/registro.js"></script>
+</body>
+</html>

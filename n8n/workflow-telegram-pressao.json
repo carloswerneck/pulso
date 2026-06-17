@@ -1,0 +1,120 @@
+{
+  "name": "Pressão Arterial via Telegram",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message"],
+        "additionalFields": {}
+      },
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "credentials": {
+        "telegramApi": {
+          "id": "SEU_CREDENTIAL_ID",
+          "name": "Telegram Bot — CONFIGURE AQUI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Formato esperado: '128/82 76 observação opcional'\n// ou somente: '128/82'\n\nconst texto = $input.first().json.message?.text || '';\n\nconst matchPA = texto.match(/(\\d{2,3})\\s*\\/\\s*(\\d{2,3})/);\nif (!matchPA) {\n  return [{ json: { erro: true, mensagem: 'Não consegui identificar a pressão. Envie no formato: sistólica/diastólica (ex: 128/82)' } }];\n}\n\nconst sistolica = parseInt(matchPA[1]);\nconst diastolica = parseInt(matchPA[2]);\n\n// BPM: número isolado após o padrão da pressão\nconst restante = texto.slice(matchPA.index + matchPA[0].length).trim();\nconst matchBpm = restante.match(/^(\\d{2,3})/);\nconst bpm = matchBpm ? parseInt(matchBpm[1]) : null;\nconst observacao = matchBpm ? restante.slice(matchBpm[0].length).trim() : restante;\n\nreturn [{\n  json: {\n    erro: false,\n    sistolica,\n    diastolica,\n    bpm: bpm || undefined,\n    observacao: observacao || undefined,\n    origem: 'n8n',\n    medido_em: new Date().toISOString().slice(0, 19),\n    chat_id: $input.first().json.message?.chat?.id,\n  }\n}];\n"
+      },
+      "name": "Parsing da mensagem",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.erro }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Parsing OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.mensagem }}",
+        "additionalFields": {}
+      },
+      "name": "Responder erro de formato",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [900, 200],
+      "credentials": {
+        "telegramApi": {
+          "id": "SEU_CREDENTIAL_ID",
+          "name": "Telegram Bot — CONFIGURE AQUI"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://SEU-DOMINIO/api/medicoes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={{ JSON.stringify({ sistolica: $json.sistolica, diastolica: $json.diastolica, bpm: $json.bpm, observacao: $json.observacao, origem: $json.origem, medido_em: $json.medido_em }) }}",
+        "options": {}
+      },
+      "name": "POST /api/medicoes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [900, 400],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "SEU_API_KEY_CREDENTIAL_ID",
+          "name": "Pulso API Key — CONFIGURE: header=x-api-key, value=SUA_API_KEY"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Parsing da mensagem').item.json.chat_id }}",
+        "text": "={{ $json.alerta_crise ? '⚠️ Registrado: ' + $json.sistolica + '/' + $json.diastolica + ($json.bpm ? ', ' + $json.bpm + 'bpm' : '') + '. Esse valor é considerado crise hipertensiva — procure atendimento médico.' : 'Registrado: ' + $json.sistolica + '/' + $json.diastolica + ($json.bpm ? ', ' + $json.bpm + 'bpm' : '') + '.' }}",
+        "additionalFields": {}
+      },
+      "name": "Confirmar registro",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1120, 400],
+      "credentials": {
+        "telegramApi": {
+          "id": "SEU_CREDENTIAL_ID",
+          "name": "Telegram Bot — CONFIGURE AQUI"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [[{ "node": "Parsing da mensagem", "type": "main", "index": 0 }]]
+    },
+    "Parsing da mensagem": {
+      "main": [[{ "node": "Parsing OK?", "type": "main", "index": 0 }]]
+    },
+    "Parsing OK?": {
+      "main": [
+        [{ "node": "Responder erro de formato", "type": "main", "index": 0 }],
+        [{ "node": "POST /api/medicoes", "type": "main", "index": 0 }]
+      ]
+    },
+    "POST /api/medicoes": {
+      "main": [[{ "node": "Confirmar registro", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" }
+}
