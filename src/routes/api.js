@@ -1,7 +1,7 @@
 const express = require('express');
 const PDFDocument = require('pdfkit');
 const { requireApiAuth } = require('../middleware/apiAuth');
-const { inserir, listarPorPeriodo, resumoPorPeriodo, excluir } = require('../db/medicoes');
+const { inserir, buscarPorId, atualizar, listarPorPeriodo, resumoPorPeriodo, excluir } = require('../db/medicoes');
 const { classificar } = require('../lib/classificacao');
 const { resolverPeriodo } = require('../lib/periodo');
 
@@ -260,6 +260,42 @@ router.get('/medicoes/pdf', (req, res) => {
       MARGIN, y + 8, { width: CONTENT_W, align: 'center' });
 
   doc.end();
+});
+
+// GET /api/medicoes/:id
+router.get('/medicoes/:id', (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return res.status(400).json({ erro: 'ID inválido' });
+  const m = buscarPorId(id);
+  if (!m) return res.status(404).json({ erro: 'Medição não encontrada' });
+  const classificacao = classificar(m.sistolica, m.diastolica);
+  res.json({ ...m, classificacao, alerta_crise: classificacao === 'crise' });
+});
+
+// PUT /api/medicoes/:id
+router.put('/medicoes/:id', (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) return res.status(400).json({ erro: 'ID inválido' });
+
+  const exists = buscarPorId(id);
+  if (!exists) return res.status(404).json({ erro: 'Medição não encontrada' });
+
+  const { sistolica, diastolica, bpm, medido_em, observacao, origem } = req.body;
+  const erro = validar({ sistolica, diastolica, bpm });
+  if (erro) return res.status(400).json({ erro });
+
+  const medidoEm = medido_em || exists.medido_em;
+  const medicao = atualizar(id, {
+    sistolica: Number(sistolica),
+    diastolica: Number(diastolica),
+    bpm: bpm != null ? Number(bpm) : null,
+    medido_em: medidoEm,
+    observacao: observacao || null,
+    origem: origem || exists.origem,
+  });
+
+  const classificacao = classificar(medicao.sistolica, medicao.diastolica);
+  res.json({ ...medicao, classificacao, alerta_crise: classificacao === 'crise' });
 });
 
 // DELETE /api/medicoes/:id

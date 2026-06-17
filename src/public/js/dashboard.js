@@ -98,8 +98,9 @@ async function carregar(periodo) {
       <td>${m.diastolica}</td>
       <td>${m.bpm ?? '—'}</td>
       <td>${m.observacao ?? ''}</td>
-      <td>
-        <button class="btn btn-secondary" style="padding:3px 10px;font-size:12px"
+      <td style="white-space:nowrap">
+        <a href="/registro?id=${m.id}" class="btn btn-secondary" style="padding:3px 10px;font-size:12px">Editar</a>
+        <button class="btn btn-secondary" style="padding:3px 10px;font-size:12px;margin-left:4px"
           onclick="excluir(${m.id})">Excluir</button>
       </td>
     </tr>

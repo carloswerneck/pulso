@@ -53,6 +53,15 @@ function resumoPorPeriodo(inicio, fim) {
   return { ...agg, ultima };
 }
 
+function atualizar(id, { sistolica, diastolica, bpm, medido_em, observacao, origem }) {
+  getDb().run(
+    `UPDATE medicoes SET sistolica=?, diastolica=?, bpm=?, medido_em=?, observacao=?, origem=? WHERE id=?`,
+    [sistolica, diastolica, bpm ?? null, medido_em, observacao ?? null, origem ?? 'manual', id]
+  );
+  save();
+  return buscarPorId(id);
+}
+
 function excluir(id) {
   const exists = buscarPorId(id);
   if (!exists) return false;
@@ -61,4 +70,4 @@ function excluir(id) {
   return true;
 }
 
-module.exports = { inserir, buscarPorId, listarPorPeriodo, resumoPorPeriodo, excluir };
+module.exports = { inserir, buscarPorId, atualizar, listarPorPeriodo, resumoPorPeriodo, excluir };
