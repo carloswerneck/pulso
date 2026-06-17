@@ -5,5 +5,6 @@ const router = express.Router();
 router.get('/',          requireLogin, (req, res) => res.sendFile('dashboard.html', { root: 'views' }));
 router.get('/registro',  requireLogin, (req, res) => res.sendFile('registro.html',  { root: 'views' }));
 router.get('/relatorio', requireLogin, (req, res) => res.sendFile('relatorio.html', { root: 'views' }));
+router.get('/docs',      requireLogin, (req, res) => res.sendFile('docs.html',      { root: 'views' }));
 
 module.exports = router;

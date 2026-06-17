@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Docs — Pulso</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      overflow-x: auto;
+      font-size: 13px;
+      line-height: 1.6;
+      margin: 8px 0 20px;
+    }
+    code { font-family: 'Consolas', 'Fira Code', monospace; }
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    .badge-post { background: #dcfce7; color: #16a34a; }
+    .badge-get  { background: #dbeafe; color: #1d4ed8; }
+    .badge-del  { background: #fee2e2; color: #dc2626; }
+    .endpoint { font-size: 15px; font-weight: 600; vertical-align: middle; }
+    .section { margin-bottom: 40px; padding-bottom: 32px; border-bottom: 1px solid var(--border); }
+    .section:last-child { border-bottom: none; }
+    .field-table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 8px 0 16px; }
+    .field-table th { text-align: left; padding: 6px 10px; background: var(--bg-card); border: 1px solid var(--border); font-size: 12px; }
+    .field-table td { padding: 6px 10px; border: 1px solid var(--border); vertical-align: top; }
+    .obrig { color: var(--crise); font-weight: 600; }
+    .opc   { color: var(--text-muted); }
+  </style>
+</head>
+<body>
+  <nav>
+    <span class="nav-brand">Pulso</span>
+    <div class="nav-links">
+      <a href="/">Dashboard</a>
+      <a href="/registro">Registrar</a>
+      <a href="/relatorio">Relatório</a>
+      <a href="/docs" class="active">API</a>
+      <form action="/logout" method="post" style="margin:0">
+        <button type="submit" class="nav-logout">Sair</button>
+      </form>
+    </div>
+  </nav>
+
+  <div class="page">
+    <h1>Documentação da API</h1>
+
+    <p style="margin-bottom:12px;color:var(--text-muted)">
+      Todas as rotas <code>/api/*</code> exigem o header <code>x-api-key</code>
+      com a chave definida na variável de ambiente <code>API_KEY</code>.
+    </p>
+
+    <pre><code>x-api-key: SUA_API_KEY</code></pre>
+
+    <!-- POST /api/medicoes -->
+    <div class="section">
+      <p>
+        <span class="badge badge-post">POST</span>
+        <span class="endpoint">/api/medicoes</span>
+      </p>
+      <p style="margin:8px 0 12px;color:var(--text-muted)">Registra uma nova medição. Usado pelo n8n e pelo formulário web.</p>
+
+      <h2>Campos</h2>
+      <table class="field-table">
+        <thead><tr><th>Campo</th><th>Tipo</th><th>Obrigatório</th><th>Descrição</th></tr></thead>
+        <tbody>
+          <tr><td><code>sistolica</code></td><td>integer</td><td class="obrig">sim</td><td>60–260</td></tr>
+          <tr><td><code>diastolica</code></td><td>integer</td><td class="obrig">sim</td><td>30–180</td></tr>
+          <tr><td><code>bpm</code></td><td>integer</td><td class="opc">não</td><td>30–220</td></tr>
+          <tr><td><code>medido_em</code></td><td>string</td><td class="opc">não</td><td>ISO 8601 (default: agora)</td></tr>
+          <tr><td><code>observacao</code></td><td>string</td><td class="opc">não</td><td>Texto livre</td></tr>
+          <tr><td><code>origem</code></td><td>string</td><td class="opc">não</td><td><code>manual</code> ou <code>n8n</code> (default: <code>manual</code>)</td></tr>
+        </tbody>
+      </table>
+
+      <h2>curl</h2>
+      <pre><code>curl -X POST https://pulso.whatchat.app.br/api/medicoes \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: SUA_API_KEY" \
+  -d '{
+    "sistolica": 128,
+    "diastolica": 82,
+    "bpm": 76,
+    "medido_em": "2026-06-17T08:30:00",
+    "observacao": "Antes do cafe da manha",
+    "origem": "n8n"
+  }'</code></pre>
+
+      <h2>Resposta 201</h2>
+      <pre><code>{
+  "id": 42,
+  "sistolica": 128,
+  "diastolica": 82,
+  "bpm": 76,
+  "medido_em": "2026-06-17T08:30:00",
+  "observacao": "Antes do cafe da manha",
+  "origem": "n8n",
+  "classificacao": "estagio1",
+  "alerta_crise": false
+}</code></pre>
+    </div>
+
+    <!-- GET /api/medicoes -->
+    <div class="section">
+      <p>
+        <span class="badge badge-get">GET</span>
+        <span class="endpoint">/api/medicoes?periodo=7d|30d|1a</span>
+      </p>
+      <p style="margin:8px 0 12px;color:var(--text-muted)">Lista medições do período em ordem cronológica.</p>
+
+      <h2>curl</h2>
+      <pre><code>curl "https://pulso.whatchat.app.br/api/medicoes?periodo=30d" \
+  -H "x-api-key: SUA_API_KEY"</code></pre>
+
+      <h2>Resposta 200</h2>
+      <pre><code>{
+  "periodo": "30d",
+  "medicoes": [
+    {
+      "id": 40,
+      "sistolica": 130,
+      "diastolica": 84,
+      "bpm": 72,
+      "medido_em": "2026-05-20T07:15:00",
+      "observacao": "Em repouso",
+      "origem": "manual",
+      "classificacao": "estagio1"
+    }
+  ]
+}</code></pre>
+    </div>
+
+    <!-- GET /api/medicoes/resumo -->
+    <div class="section">
+      <p>
+        <span class="badge badge-get">GET</span>
+        <span class="endpoint">/api/medicoes/resumo?periodo=7d|30d|1a</span>
+      </p>
+      <p style="margin:8px 0 12px;color:var(--text-muted)">Retorna médias e última medição do período. <code>alerta_crise: true</code> se a última medição for crise hipertensiva.</p>
+
+      <h2>curl</h2>
+      <pre><code>curl "https://pulso.whatchat.app.br/api/medicoes/resumo?periodo=30d" \
+  -H "x-api-key: SUA_API_KEY"</code></pre>
+
+      <h2>Resposta 200</h2>
+      <pre><code>{
+  "periodo": "30d",
+  "media_sistolica": 132,
+  "media_diastolica": 85,
+  "media_bpm": 76,
+  "total_medicoes": 24,
+  "ultima_medicao": {
+    "sistolica": 128,
+    "diastolica": 82,
+    "bpm": 76,
+    "medido_em": "2026-06-17T08:30:00",
+    "classificacao": "estagio1"
+  },
+  "alerta_crise": false
+}</code></pre>
+    </div>
+
+    <!-- GET /api/medicoes/pdf -->
+    <div class="section">
+      <p>
+        <span class="badge badge-get">GET</span>
+        <span class="endpoint">/api/medicoes/pdf?periodo=7d|30d|1a</span>
+      </p>
+      <p style="margin:8px 0 12px;color:var(--text-muted)">Gera e retorna um PDF com o relatório do período.</p>
+
+      <h2>curl</h2>
+      <pre><code>curl "https://pulso.whatchat.app.br/api/medicoes/pdf?periodo=30d" \
+  -H "x-api-key: SUA_API_KEY" \
+  -o relatorio.pdf</code></pre>
+    </div>
+
+    <!-- DELETE /api/medicoes/:id -->
+    <div class="section">
+      <p>
+        <span class="badge badge-del">DELETE</span>
+        <span class="endpoint">/api/medicoes/:id</span>
+      </p>
+      <p style="margin:8px 0 12px;color:var(--text-muted)">Remove uma medição pelo ID.</p>
+
+      <h2>curl</h2>
+      <pre><code>curl -X DELETE https://pulso.whatchat.app.br/api/medicoes/42 \
+  -H "x-api-key: SUA_API_KEY"</code></pre>
+
+      <h2>Resposta 200</h2>
+      <pre><code>{ "ok": true }</code></pre>
+    </div>
+
+  </div>
+</body>
+</html>
