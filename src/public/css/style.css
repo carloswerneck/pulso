@@ -43,7 +43,7 @@ nav {
   top: 0;
   z-index: 10;
 }
-.nav-brand { font-weight: 700; font-size: 16px; color: var(--text); }
+.nav-brand { font-weight: 700; font-size: 16px; color: var(--text); text-decoration: none; }
 .nav-links { display: flex; gap: 20px; align-items: center; }
 .nav-links a { color: var(--text-muted); font-size: 14px; }
 .nav-links a:hover, .nav-links a.active { color: var(--accent); text-decoration: none; }
