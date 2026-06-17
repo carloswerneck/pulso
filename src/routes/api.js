@@ -89,63 +89,175 @@ router.get('/medicoes/resumo', (req, res) => {
 router.get('/medicoes/pdf', (req, res) => {
   const { periodo, inicio, fim } = req.query;
   const p = resolverPeriodo(periodo, inicio, fim);
-  const medicoes = listarPorPeriodo(p.inicio, p.fim);
+  const medicoes = listarPorPeriodo(p.inicio, p.fim).map(m => ({
+    ...m, classificacao: classificar(m.sistolica, m.diastolica),
+  }));
   const r = resumoPorPeriodo(p.inicio, p.fim);
 
-  const paciente = process.env.PACIENTE_NOME || '';
-  const doc = new PDFDocument({ margin: 50, size: 'A4' });
+  const paciente = process.env.PACIENTE_NOME || 'Paciente';
+  const doc = new PDFDocument({ margin: 0, size: 'A4' });
 
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `attachment; filename="pressao-${periodo || 'relatorio'}.pdf"`);
   doc.pipe(res);
 
-  // Cabeçalho
-  doc.fontSize(18).font('Helvetica-Bold').text('Relatório de Pressão Arterial', { align: 'center' });
-  if (paciente) doc.fontSize(13).font('Helvetica').text(paciente, { align: 'center' });
-  doc.fontSize(11).font('Helvetica').text(`Período: ${p.label}`, { align: 'center' });
-  doc.moveDown();
+  const W = 595.28;
+  const MARGIN = 40;
+  const CONTENT_W = W - MARGIN * 2;
+  const BLUE = '#1d4ed8';
+  const GRAY = '#f5f5f4';
+  const BORDER = '#e5e5e5';
+  const MUTED = '#6b7280';
+  const RED = '#E24B4A';
+  const WHITE = '#ffffff';
 
-  // Resumo
-  doc.fontSize(12).font('Helvetica-Bold').text('Resumo');
-  doc.font('Helvetica').fontSize(11);
-  doc.text(`Total de medições: ${r.total_medicoes}`);
-  if (r.total_medicoes > 0) {
-    doc.text(`Média sistólica: ${r.media_sistolica} mmHg`);
-    doc.text(`Média diastólica: ${r.media_diastolica} mmHg`);
-    if (r.media_bpm) doc.text(`Média BPM: ${r.media_bpm}`);
+  function formatDT(iso) {
+    if (!iso) return '—';
+    const s = iso.replace('T', ' ');
+    const d = s.slice(0, 10).split('-');
+    const t = s.slice(11, 16);
+    return `${d[2]}/${d[1]}/${d[0]}  ${t}`;
   }
-  doc.moveDown();
 
-  // Tabela
-  doc.fontSize(12).font('Helvetica-Bold').text('Medições');
-  doc.moveDown(0.5);
+  function drawTableRow(y, cols, widths, opts = {}) {
+    const { bold = false, bg, textColor = '#1a1a1a', rowH = 22 } = opts;
+    if (bg) {
+      doc.rect(MARGIN, y, CONTENT_W, rowH).fill(bg);
+    }
+    doc.fillColor(BORDER).rect(MARGIN, y + rowH - 0.5, CONTENT_W, 0.5).fill();
 
-  const colX = [50, 155, 220, 285, 335, 400];
-  const headers = ['Data/Hora', 'Sistólica', 'Diastólica', 'BPM', 'Origem', 'Observação'];
+    let x = MARGIN;
+    doc.font(bold ? 'Helvetica-Bold' : 'Helvetica').fontSize(8.5).fillColor(textColor);
+    cols.forEach((text, i) => {
+      doc.text(String(text ?? '—'), x + 5, y + 6, { width: widths[i] - 10, lineBreak: false, ellipsis: true });
+      x += widths[i];
+    });
+    return y + rowH;
+  }
 
-  doc.fontSize(9).font('Helvetica-Bold');
-  headers.forEach((h, i) => doc.text(h, colX[i], doc.y, { width: colX[i + 1] ? colX[i + 1] - colX[i] - 5 : 145, lineBreak: false }));
-  doc.moveDown(0.8);
+  // ── HEADER BAR ──────────────────────────────────────────────
+  doc.rect(0, 0, W, 90).fill(BLUE);
+  doc.fillColor(WHITE).font('Helvetica-Bold').fontSize(22)
+    .text('Relatório de Pressão Arterial', MARGIN, 18, { width: CONTENT_W, align: 'center' });
+  doc.font('Helvetica').fontSize(11).fillColor('rgba(255,255,255,0.85)')
+    .text(paciente, MARGIN, 46, { width: CONTENT_W, align: 'center' });
+  doc.fontSize(10).fillColor('rgba(255,255,255,0.7)')
+    .text(`Período: ${p.label}  ·  Gerado em ${new Date().toLocaleDateString('pt-BR')}`, MARGIN, 64, { width: CONTENT_W, align: 'center' });
 
-  doc.font('Helvetica').fontSize(9);
-  medicoes.forEach(m => {
-    if (doc.y > 720) { doc.addPage(); }
-    const y = doc.y;
-    const cols = [
-      m.medido_em ? m.medido_em.replace('T', ' ') : '',
-      `${m.sistolica}`,
-      `${m.diastolica}`,
-      m.bpm ? `${m.bpm}` : '-',
-      m.origem,
-      m.observacao || '',
-    ];
-    cols.forEach((c, i) => doc.text(c, colX[i], y, { width: colX[i + 1] ? colX[i + 1] - colX[i] - 5 : 145, lineBreak: false }));
-    doc.moveDown(0.8);
+  let y = 108;
+
+  // ── CARDS DE RESUMO ──────────────────────────────────────────
+  const cardW = (CONTENT_W - 12) / 4;
+  const cards = [
+    { label: 'Média Sistólica',  value: r.total_medicoes ? `${r.media_sistolica}` : '—', unit: 'mmHg' },
+    { label: 'Média Diastólica', value: r.total_medicoes ? `${r.media_diastolica}` : '—', unit: 'mmHg' },
+    { label: 'Média BPM',        value: r.media_bpm ? `${r.media_bpm}` : '—', unit: 'bpm' },
+    { label: 'Total de medições', value: `${r.total_medicoes}`, unit: 'registros' },
+  ];
+
+  cards.forEach((card, i) => {
+    const cx = MARGIN + i * (cardW + 4);
+    doc.roundedRect(cx, y, cardW, 62, 4).fill(GRAY);
+    doc.rect(cx, y, 3, 62).fill(BLUE);
+    doc.font('Helvetica').fontSize(8).fillColor(MUTED)
+      .text(card.label.toUpperCase(), cx + 10, y + 10, { width: cardW - 14 });
+    doc.font('Helvetica-Bold').fontSize(22).fillColor('#1a1a1a')
+      .text(card.value, cx + 10, y + 22, { width: cardW - 14, lineBreak: false });
+    doc.font('Helvetica').fontSize(9).fillColor(MUTED)
+      .text(card.unit, cx + 10, y + 47, { width: cardW - 14 });
   });
 
-  if (medicoes.length === 0) {
-    doc.text('Nenhuma medição no período selecionado.');
+  y += 78;
+
+  // ── ÚLTIMA MEDIÇÃO ───────────────────────────────────────────
+  if (r.ultima) {
+    const u = r.ultima;
+    const cl = classificar(u.sistolica, u.diastolica);
+    const isCrise = cl === 'crise';
+    const bgUltima = isCrise ? '#fef2f2' : '#eff6ff';
+    const borderUltima = isCrise ? RED : BLUE;
+
+    doc.roundedRect(MARGIN, y, CONTENT_W, 38, 4).fill(bgUltima);
+    doc.rect(MARGIN, y, 3, 38).fill(borderUltima);
+    doc.font('Helvetica-Bold').fontSize(9).fillColor(borderUltima)
+      .text('ÚLTIMA MEDIÇÃO', MARGIN + 10, y + 8);
+    const uText = `${formatDT(u.medido_em)}   ·   ${u.sistolica}/${u.diastolica} mmHg${u.bpm ? `   ·   ${u.bpm} bpm` : ''}`;
+    doc.font('Helvetica').fontSize(10).fillColor('#1a1a1a')
+      .text(uText, MARGIN + 10, y + 21);
+    if (isCrise) {
+      doc.font('Helvetica-Bold').fontSize(9).fillColor(RED)
+        .text('CRISE HIPERTENSIVA', MARGIN + CONTENT_W - 130, y + 15);
+    }
+    y += 52;
   }
+
+  // ── TÍTULO DA TABELA ─────────────────────────────────────────
+  doc.font('Helvetica-Bold').fontSize(12).fillColor('#1a1a1a')
+    .text('Medições do período', MARGIN, y);
+  y += 18;
+
+  // ── TABELA ───────────────────────────────────────────────────
+  const widths = [118, 68, 72, 52, 52, 153];
+  const headers = ['Data / Hora', 'Sistólica', 'Diastólica', 'BPM', 'Origem', 'Observação'];
+
+  // cabeçalho
+  doc.rect(MARGIN, y, CONTENT_W, 22).fill(BLUE);
+  let hx = MARGIN;
+  doc.font('Helvetica-Bold').fontSize(8.5).fillColor(WHITE);
+  headers.forEach((h, i) => {
+    doc.text(h, hx + 5, y + 7, { width: widths[i] - 10, lineBreak: false });
+    hx += widths[i];
+  });
+  y += 22;
+
+  if (medicoes.length === 0) {
+    doc.rect(MARGIN, y, CONTENT_W, 30).fill(GRAY);
+    doc.font('Helvetica').fontSize(10).fillColor(MUTED)
+      .text('Nenhuma medição no período selecionado.', MARGIN, y + 10, { width: CONTENT_W, align: 'center' });
+    y += 30;
+  } else {
+    medicoes.slice().reverse().forEach((m, idx) => {
+      if (y > 770) {
+        doc.addPage({ margin: 0 });
+        doc.rect(0, 0, W, 90).fill(BLUE);
+        doc.fillColor(WHITE).font('Helvetica-Bold').fontSize(16)
+          .text('Relatório de Pressão Arterial', MARGIN, 32, { width: CONTENT_W, align: 'center' });
+        doc.font('Helvetica').fontSize(10).fillColor('rgba(255,255,255,0.7)')
+          .text(`${paciente}  ·  ${p.label}`, MARGIN, 56, { width: CONTENT_W, align: 'center' });
+        y = 108;
+
+        doc.rect(MARGIN, y, CONTENT_W, 22).fill(BLUE);
+        let hx2 = MARGIN;
+        doc.font('Helvetica-Bold').fontSize(8.5).fillColor(WHITE);
+        headers.forEach((h, i) => {
+          doc.text(h, hx2 + 5, y + 7, { width: widths[i] - 10, lineBreak: false });
+          hx2 += widths[i];
+        });
+        y += 22;
+      }
+
+      const isCrise = m.classificacao === 'crise';
+      const rowBg = isCrise ? '#fef2f2' : (idx % 2 === 0 ? WHITE : GRAY);
+      const textColor = isCrise ? RED : '#1a1a1a';
+
+      const cols = [
+        formatDT(m.medido_em),
+        `${m.sistolica} mmHg`,
+        `${m.diastolica} mmHg`,
+        m.bpm ? `${m.bpm}` : '—',
+        m.origem,
+        m.observacao || '',
+      ];
+      y = drawTableRow(y, cols, widths, { bg: rowBg, textColor });
+    });
+  }
+
+  // ── RODAPÉ ───────────────────────────────────────────────────
+  y += 20;
+  doc.moveTo(MARGIN, y).lineTo(MARGIN + CONTENT_W, y).strokeColor(BORDER).lineWidth(0.5).stroke();
+  doc.font('Helvetica').fontSize(8).fillColor(MUTED)
+    .text(`Pulso — Sistema de Monitoramento de Pressão Arterial  ·  ${new Date().toLocaleString('pt-BR')}`,
+      MARGIN, y + 8, { width: CONTENT_W, align: 'center' });
 
   doc.end();
 });
