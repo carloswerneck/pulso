@@ -30,6 +30,14 @@ function validar({ sistolica, diastolica, bpm }) {
   return null;
 }
 
+// GET /api/link-publico
+router.get('/link-publico', (req, res) => {
+  const token = process.env.PUBLIC_TOKEN;
+  if (!token) return res.json({ ativo: false });
+  const base = `${req.protocol}://${req.get('host')}`;
+  res.json({ ativo: true, url: `${base}/p/${token}` });
+});
+
 // POST /api/medicoes
 router.post('/medicoes', (req, res) => {
   const { sistolica, diastolica, bpm, medido_em, observacao, origem } = req.body;

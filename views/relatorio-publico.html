@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatório de Pressão Arterial</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav>
+    <span class="nav-brand">Pulso</span>
+    <div class="nav-links" style="color:var(--text-muted);font-size:13px">
+      Relatório público — somente leitura
+    </div>
+  </nav>
+
+  <div class="page">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+      <h1 style="margin:0">Pressão arterial</h1>
+      <button class="btn btn-secondary" id="btnPdf">Exportar PDF</button>
+    </div>
+
+    <div class="filtros">
+      <button class="btn-filtro" data-periodo="7d">7 dias</button>
+      <button class="btn-filtro ativo" data-periodo="30d">Último mês</button>
+      <button class="btn-filtro" data-periodo="1a">Último ano</button>
+    </div>
+
+    <div class="resumo-grid">
+      <div class="resumo-item">
+        <div class="resumo-label">Média sistólica</div>
+        <div class="resumo-valor" id="mediaSis">—</div>
+      </div>
+      <div class="resumo-item">
+        <div class="resumo-label">Média diastólica</div>
+        <div class="resumo-valor" id="mediaDia">—</div>
+      </div>
+      <div class="resumo-item">
+        <div class="resumo-label">Média BPM</div>
+        <div class="resumo-valor" id="mediaBpm">—</div>
+      </div>
+      <div class="resumo-item">
+        <div class="resumo-label">Total de medições</div>
+        <div class="resumo-valor" id="total">—</div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Data / Hora</th>
+            <th>Sistólica</th>
+            <th>Diastólica</th>
+            <th>BPM</th>
+            <th>Observação</th>
+          </tr>
+        </thead>
+        <tbody id="tabelaCorpo">
+          <tr><td colspan="5" class="sem-dados">Carregando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const TOKEN = document.currentScript ? '' : '';
+    const token = location.pathname.split('/')[2];
+    let periodoAtivo = '30d';
+
+    function formatarDataHora(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso.replace(' ', 'T'));
+      return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+
+    async function carregar(periodo) {
+      const [resumoRes, medicoesRes] = await Promise.all([
+        fetch(`/api/p/${token}/resumo?periodo=${periodo}`),
+        fetch(`/api/p/${token}/medicoes?periodo=${periodo}`),
+      ]);
+
+      if (!resumoRes.ok) {
+        document.getElementById('tabelaCorpo').innerHTML =
+          '<tr><td colspan="5" class="sem-dados">Link inválido ou expirado.</td></tr>';
+        return;
+      }
+
+      const resumo = await resumoRes.json();
+      const { medicoes } = await medicoesRes.json();
+
+      document.getElementById('mediaSis').textContent = resumo.media_sistolica ?? '—';
+      document.getElementById('mediaDia').textContent = resumo.media_diastolica ?? '—';
+      document.getElementById('mediaBpm').textContent = resumo.media_bpm ?? '—';
+      document.getElementById('total').textContent    = resumo.total_medicoes ?? '0';
+
+      const tbody = document.getElementById('tabelaCorpo');
+      const lista = [...medicoes].reverse();
+      if (lista.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="sem-dados">Nenhuma medição no período.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = lista.map(m => `
+        <tr class="${m.classificacao === 'crise' ? 'crise' : ''}">
+          <td>${formatarDataHora(m.medido_em)}</td>
+          <td>${m.sistolica}</td>
+          <td>${m.diastolica}</td>
+          <td>${m.bpm ?? '—'}</td>
+          <td>${m.observacao ?? ''}</td>
+        </tr>
+      `).join('');
+    }
+
+    document.querySelectorAll('.btn-filtro').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.btn-filtro').forEach(b => b.classList.remove('ativo'));
+        btn.classList.add('ativo');
+        periodoAtivo = btn.dataset.periodo;
+        carregar(periodoAtivo);
+      });
+    });
+
+    document.getElementById('btnPdf').addEventListener('click', () => {
+      window.open(`/api/p/${token}/pdf?periodo=${periodoAtivo}`, '_blank');
+    });
+
+    carregar(periodoAtivo);
+  </script>
+</body>
+</html>

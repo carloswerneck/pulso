@@ -55,4 +55,27 @@ document.getElementById('btnPdf').addEventListener('click', () => {
   window.open(`/api/medicoes/pdf?periodo=${periodoAtivo}`, '_blank');
 });
 
+// Botão compartilhar
+fetch('/api/link-publico').then(r => r.json()).then(data => {
+  const btn = document.getElementById('btnCompartilhar');
+  if (!data.ativo) {
+    btn.title = 'Configure PUBLIC_TOKEN no servidor para habilitar';
+    btn.style.opacity = '0.4';
+    btn.style.cursor = 'not-allowed';
+    return;
+  }
+  btn.addEventListener('click', () => {
+    const url = data.url;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(() => {
+        const orig = btn.textContent;
+        btn.textContent = 'Link copiado!';
+        setTimeout(() => { btn.textContent = orig; }, 2000);
+      });
+    } else {
+      prompt('Copie o link público:', url);
+    }
+  });
+});
+
 carregar(periodoAtivo);

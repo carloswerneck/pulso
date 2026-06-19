@@ -30,6 +30,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', require('./routes/auth'));
 app.use('/', require('./routes/paginas'));
 app.use('/api', require('./routes/api'));
+app.use('/api/p/:token', require('./routes/apiPublica'));
 
 const PORT = process.env.PORT || 3000;
 
